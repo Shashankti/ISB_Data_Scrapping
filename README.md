@@ -7,3 +7,5 @@
 * *Scraping.R* - R script for scraping the CDSCO website
 * *PDF_Scraper.R* - R script for scraping the tables from PDF files.
 * *rename.R* - R script for bulk renaming for files
+*  *Merge_Data.R* - R script to merge data from all extracled tables and clean the data
+*  *Splitpdf,extratctable/py* - Python scripts used to extract tables from the pdfs
