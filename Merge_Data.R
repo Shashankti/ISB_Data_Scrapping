@@ -1,0 +1,87 @@
+#' Script to merge the xls dataframes
+#'
+#'
+
+library(data.table)
+library(xlsx)
+library(readxl)
+library(plyr)
+library(tidyverse)
+
+
+setwd("CDSC_Data/ExtractedTables/")
+
+#' Convert xlxs to csv
+files.to.read = list.files(pattern = "xlsx")
+
+#' Read the files and comvert
+lapply(files.to.read,function(f){
+  df = read_excel(f,sheet = 1)
+  write.csv(df,gsub("xlsx","csv",f),row.names = FALSE)
+})
+
+
+
+
+data.files = list.files(pattern = ".csv")
+# Read the csv files
+read_files <- function(z){
+  dat <- fread(z)
+}
+data_list <- lapply(data.files,read_files)
+#Add coulumn for dates
+for( i in 1:length(data.files)){
+  data_list[[i]]$ID <- rep(tools::file_path_sans_ext(basename(data.files))[i],length(data_list[[i]]$`Sr. No.`))
+}
+
+# Clean columns
+for (i in 1:length(data_list)){
+  if(length(names(data_list[[i]]))>7){
+    print(i)
+  }
+}
+
+
+## Merge the list
+combined_df <- rbindlist(data_list,fill = TRUE)
+combined_df$...7 <- NULL
+combined_df$...8 <- NULL
+combined_df$...9 <- NULL
+combined_df$`Name of Drugs/ Cosmetics...1` <- NULL
+combined_df <- combined_df %>% mutate(Names=coalesce(`Name of Drugs/ Cosmetics`,`Name of Drugs/ Cosmetics...2`),
+                                      Details = coalesce(`Batch No./ Date of Manufacture/ Date of Expiry/ Manufactured By`,`Name of Drugs/ Cosmetics...3`),
+                                      DrawnBy = coalesce(`Drawn By`,`Declared by`),
+                                      DrawnFrom=coalesce(`Drawn From`,`Received From`)) %>%
+  select(`Sr. No.`,Names,Details,`Reason for Failure`,DrawnBy,DrawnFrom,ID)
+combined_df$Details <- combined_df$`Batch No./ Date of Manufacture/ Date of Expiry/ Manufactured By`
+
+## Remove extra characters
+combined_df$Details <- gsub("[\r\n]","",combined_df$Details)
+combined_df$Names <- gsub("[\r\n]","",combined_df$Names)
+combined_df$`Reason for Failure` <- gsub("[\r\n]","",combined_df$`Reason for Failure`)
+combined_df$DrawnBy <- gsub("[\r\n]","",combined_df$DrawnBy)
+combined_df$DrawnFrom <- gsub("[\r\n]","",combined_df$DrawnFrom)
+combined_df$ID <- gsub("_"," ", combined_df$ID)
+for(i in 1:length(combined_df$ID)){
+  combined_df$Month[i] <- strsplit(combined_df$ID[i],split = " ")[[1]][1]
+  combined_df$Year[i] <- strsplit(combined_df$ID[i],split = " ")[[1]][2]
+}
+combined_df$`Sr. No.` <- NULL
+#Set col names
+names(combined_df)
+
+##Fixing broken NA values
+combined_df$ID[532:545] <- " December 2020"
+combined_df$ID[737:769] <- "February 2020"
+combined_df$ID[935:965] <- "January 2020"
+combined_df$ID[1630:1670] <- "March 2020"
+combined_df$ID[1995:2028] <- "November 2019"
+combined_df$ID[2029:2042] <- "November 2020"
+# ###
+# combined_df$`Batch No./ Date of Manufacture/ Date of Expiry/ Manufactured By`[11:27] <- data_list[[3]]$`Name of Drugs/ Cosmetics...3`
+# combined_df$`Batch No./ Date of Manufacture/ Date of Expiry/ Manufactured By`[1902:1909] <- data_list[[85]]$`Name of Drugs/ Cosmetics...3`
+# combined_df$`Batch No./ Date of Manufacture/ Date of Expiry/ Manufactured By`[1269:1309] <- data_list[[58]]$`Name of Drugs/ Cosmetics...3`
+
+# Save output as csv file
+write.csv(combined_df,"Combined_List.csv")
+
