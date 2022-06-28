@@ -3,11 +3,12 @@
 #'
 
 library(data.table)
-library(xlsx)
-library(readxl)
+#library(xlsx)
+#library(readxl)
 library(plyr)
 library(tidyverse)
-
+library(stringr)
+library(mltools)
 
 setwd("CDSC_Data/ExtractedTables/")
 
@@ -84,4 +85,71 @@ combined_df$ID[2029:2042] <- "November 2020"
 
 # Save output as csv file
 write.csv(combined_df,"Combined_List.csv")
+
+
+## Edit the second column
+# Add batch number
+for( i in 1:length(combined_df$Names)){
+  combined_df$Batch_Number[i] <- strsplit(combined_df$Details[i],split = "Mfg")[[1]][1]
+}
+
+
+# Add mfg date
+a = 0
+Dates <- str_extract_all(combined_df$Details, "[0-9]{2}/[0-9]{4}")
+for(i in 1:length(Dates)){
+  if(length(Dates[[i]])==2){
+     combined_df$Mfg_Date[i] <- Dates[[i]][1]
+     combined_df$Exp_Date[i] <- Dates[[i]][2]
+    print(i)
+    #a = a+1
+  } else if (length(Dates[[i]])>2){
+    if(Dates[[i]][1]==Dates[[i]][3]){
+      combined_df$Mfg_Date[i] <- Dates[[i]][1]
+      combined_df$Exp_Date[i] <- Dates[[i]][2]
+    } else {
+      combined_df$Mfg_Date[i] <- Dates[[i]][1]
+      combined_df$Exp_Date[i] <- Dates[[i]][3]
+    }
+  }
+}
+
+for(i in 1:length(Dates)){
+  if(is_empty(Dates[[i]])){
+    print(list(combined_df$Details[i],Dates[[i]]))
+    #a = a+1
+  }
+}
+
+for(i in 1:length(Dates2)){
+  if(!is_empty(Dates2[[i]])){
+    print(list(combined_df$Details[i],Dates[[i]]))
+    #a = a+1
+  }
+}
+l1 <- c("Jan","Feb","Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct","Nov", "Dec")
+Dates2 <- str_extract_all(combined_df$Details, "[mont.abb], [0-9]{4}")
+
+# Add exp Date
+
+#Test1 = combined_df%>%group_by(Names)
+
+# encoding the name and reason columns
+combined_df <- as.data.table(combined_df)
+combined_df$Names.encoded <- tolower(combined_df$Names)
+combined_df$Names.encoded <- as.factor(combined_df$Names.encoded)
+combined_df$Names.encoded <- mltools::one_hot(combined_df$Names.encoded)
+combined_df$Reason.encoded <- tolower(combined_df$`Reason for Failure`)
+combined_df$Reason.encoded <- as.factor(combined_df$Reason.encoded)
+combined_df$Reason.encoded <- mltools::one_hot(combined_df$Reason.encoded)
+
+
+# Read NDc data
+combined_df <- fread("Combined_List_wmfg.csv",header = TRUE)
+ref <- fread("product.csv")
+
+val <- grep(pattern = ref$propname[3545],x = combined_df$Names,value = TRUE)
+
+write.csv(combined_df,"Combined_List_wmfg.csv")
+
 

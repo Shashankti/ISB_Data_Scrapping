@@ -10,7 +10,10 @@ for (i in 1:length(files)){
   #if(i==104 | i==1) next
   head_data <- pdf_data(files[i])[[1]]$text[1:30]
   j = which(head_data == "Month" | head_data =="month")
-  Year_data[i] = head_data[j+3]
+  Year_data[i] = ifelse(head_data[j+3]==hyp,head_data[j+4],head_data[j+3])
+  Month_data[i] = ifelse(is.null(head_data[j+2]),NA,head_data[j+2])
+  #Year_data[i] = head_data[j+3]
+  #Month_data[i] = head_data[j+2]
   #print(pdf_data(files[i])[[1]]$text[1:15])
 }
 Year_data[1] <- 2021
